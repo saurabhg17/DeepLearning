@@ -39,33 +39,28 @@ def DefineCnnModel():
 	model = Sequential()
 	
 	# Block 1.
-	model.add(Conv2D(32, (3, 3), padding='same', activation='relu', kernel_initializer='he_uniform', input_shape=(INPUT_SIZE, INPUT_SIZE, 3)))
+	model.add(Conv2D( 32, (3, 3), padding='same', activation='relu', kernel_initializer='he_uniform', input_shape=(INPUT_SIZE, INPUT_SIZE, 3)))
 	model.add(MaxPooling2D(pool_size=(4, 4)))
 	
 	# Block 2.
-	model.add(Conv2D(64, (3, 3), padding='same', activation='relu', kernel_initializer='he_uniform'))
+	model.add(Conv2D( 64, (3, 3), padding='same', activation='relu', kernel_initializer='he_uniform'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	#model.add(Dropout(0.4))
 	
 	# Block 3.
 	model.add(Conv2D(128, (3, 3), padding='same', activation='relu', kernel_initializer='he_uniform'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	#model.add(Dropout(0.4))
 	
-	model.add(Conv2D(256, (3,3), padding='same', activation='relu', kernel_initializer='he_uniform'))
-	model.add(MaxPooling2D(pool_size = (2,2)))
-	#model.add(Dropout(0.4))
+	# Block 4.
+	model.add(Conv2D(256, (3, 3), padding='same', activation='relu', kernel_initializer='he_uniform'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
 	
-	model.add(Conv2D(512, (1,1), padding='same', activation='relu', kernel_initializer='he_uniform'))
-	model.add(MaxPooling2D(pool_size = (2,2)))
+	# Block 5.
+	model.add(Conv2D(512, (1, 1), padding='same', activation='relu', kernel_initializer='he_uniform'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
 	
 	# Output layer.
 	model.add(Flatten())
-	#model.add(Dropout(0.4))
-	
 	model.add(Dense(32, activation='relu'))
-	#model.add(Dropout(0.5))
-	
 	model.add(Dense( 2, activation='softmax'))
 	
 	# Define optimization function.
