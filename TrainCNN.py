@@ -1,19 +1,24 @@
-from keras.callbacks                  import Callback
-from keras.models                     import Sequential
-from keras.layers                     import Dense, Dropout, Flatten
-from keras.layers.convolutional       import Conv2D, MaxPooling2D
-from keras.optimizers                 import SGD
-from keras.preprocessing.image        import ImageDataGenerator
-from keras_tqdm                       import TQDMNotebookCallback
-from keras.backend.tensorflow_backend import set_session
-from matplotlib                       import pyplot as plt
 import tensorflow as tf
+Sequential         = tf.keras.models.Sequential
+Dense              = tf.keras.layers.Dense
+Dropout            = tf.keras.layers.Dropout
+Flatten            = tf.keras.layers.Flatten
+Conv2D             = tf.keras.layers.Conv2D
+MaxPooling2D       = tf.keras.layers.MaxPooling2D
+SGD                = tf.keras.optimizers.SGD
+ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
+
+from matplotlib import pyplot as plt
 import sys
+
+
 
 INPUT_SIZE    = 150
 NUM_EPOCHS    = 50
 LEARNING_RATE = 0.01
 SGD_MOMENTUM  = 0.9
+
+
 
 def main():
 	model = DefineCnnModel()
@@ -39,7 +44,7 @@ def DefineCnnModel():
 	model.add(Dense(128, activation='relu'))
 	model.add(Dense(  1, activation='softmax'))
 	
-	# Define optimization funtion.
+	# Define optimization function.
 	decay = LEARNING_RATE/NUM_EPOCHS
 	sgd   = SGD(lr=LEARNING_RATE, momentum=SGD_MOMENTUM, decay=decay, nesterov=False)
 	
