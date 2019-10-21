@@ -18,8 +18,8 @@ INPUT_SIZE     = 200
 NUM_EPOCHS     = 20
 LEARNING_RATE  = 0.1
 SGD_MOMENTUM   = 0.9
-TRAIN_DIR      = "data/train_orig"#.format(INPUT_SIZE)
-VALIDATION_DIR = "data/validate_orig"#.format(INPUT_SIZE)
+TRAIN_DIR      = "data/train"
+VALIDATION_DIR = "data/validate"
 BATCH_SIZE     = 32
 
 
