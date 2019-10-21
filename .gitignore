@@ -1,0 +1,6 @@
+.vscode/
+test/
+train_150/
+train_200/
+train_250/
+train_orig/
