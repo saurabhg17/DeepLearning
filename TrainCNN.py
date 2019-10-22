@@ -1,10 +1,11 @@
-import tensorflow as tf
+import os
+# 0 | DEBUG   | [Default] Print all messages
+# 1 | INFO    | Filter out INFO messages
+# 2 | WARNING | Filter out INFO & WARNING messages
+# 3 | ERROR   | Filter out all messages
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2" # Prints only the error messages.
 
-# Using less than 100% GPU memory prevents "Could not create cudnn handle: CUDNN_STATUS_ALLOC_FAILED" error.
-#gpus = tf.config.experimental.list_physical_devices('GPU')
-#if gpus:
-#	tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1500)])
-#	#tf.config.experimental.set_memory_growth(gpus[0], True)
+import tensorflow as tf
 
 Sequential         = tf.keras.models.Sequential
 Dense              = tf.keras.layers.Dense
@@ -18,42 +19,47 @@ ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
 from matplotlib import pyplot as plt
 import argparse, sys
 
+TEST_SRC = False
+if not TEST_SRC:
+	TRAIN_DIR      = "data/train"
+	VALIDATION_DIR = "data/validate"
+else:
+	TRAIN_DIR      = "data/train_srctest"
+	VALIDATION_DIR = "data/validate_srctest"
 
-TRAIN_DIR          = "data/train"
-VALIDATION_DIR     = "data/validate"
 DEFAULT_IMAGE_SIZE = 200
 DEFAULT_BATCH_SIZE = 32
-NUM_EPOCHS         = 20
+NUM_EPOCHS         = 2
 
 
 def main():
 	parser = argparse.ArgumentParser(description="Train a CNN model to determine if an image has dog or cat.")
-	parser.add_argument("--imageSize"  , "-s"  , type=int, help="The image size to use"           , default=DEFAULT_IMAGE_SIZE)
-	parser.add_argument("--optimizer"  , "-opt", type=str, help="The optimization function to use", default="adam")
-	parser.add_argument("--batchSize"  , "-b"  , type=int, help="The batch size (32, 64, 128)"    , default=DEFAULT_BATCH_SIZE)
-	parser.add_argument("--outputChart", "-oi" , type=str, help="The output chart file name"      , default="Results.png")
-	parser.add_argument("--outputCSV"  , "-oc" , type=str, help="The output CSV file name"        , default="Results.csv")
+	parser.add_argument("--imageSize"  , "-is"  , type=int, help="The image size to use"         , default=DEFAULT_IMAGE_SIZE)
+	parser.add_argument("--optimizer"  , "-op", type=str, help="The optimization function to use", default="adam")
+	parser.add_argument("--batchSize"  , "-bs"  , type=int, help="The batch size (32, 64, 128)"  , default=DEFAULT_BATCH_SIZE)
+	parser.add_argument("--outputChart", "-oc" , type=str, help="The output chart file name"     , default="Results.png")
+	parser.add_argument("--outputCSV"  , "-od" , type=str, help="The output CSV file name"       , default="Results.csv")
 	args = parser.parse_args()
 	
+	print("\n")
 	model = DefineCnnModel(args.optimizer, args.imageSize)
-	trainIterator, validationIterator = CreateDataIterators(args.imageSize, args.batchSize)
+	print("\n")
 	
-	print("\n\n")
+	print("Creating training and validation image iterators")
+	trainIterator, validationIterator = CreateDataIterators(args.imageSize, args.batchSize)
+	print("\n")
+	
+	print("Training CNN model")
 	history = model.fit_generator(trainIterator, 
 	                              steps_per_epoch=len(trainIterator), 
 								  epochs=NUM_EPOCHS, 
 								  verbose=2,
 								  validation_data=validationIterator, 
 								  validation_steps=len(validationIterator))
+	print("\n")
 	
-	SaveResults(history, args.outputChart)
-	
-	loss, accuracy = model.evaluate_generator(validationIterator, steps=len(validationIterator), verbose=2)
-	N        = len(history.history["val_loss"])
-	loss     = history.history["val_loss"][N-1]
-	accuracy = history.history["val_accuracy"][N-1]
-	with open(args.outputCSV, "a") as _file:
-		_file.write("{}, {}, {}, {:.2f}, {:.2f}\n".format(args.optimizer, args.imageSize, args.batchSize, loss, accuracy*100.0))
+	GenerateCharts(history, args.outputChart)
+	SaveResults(history, args)
 	
 	
 def DefineCnnModel(optimizer, imageSize):
@@ -86,9 +92,7 @@ def DefineCnnModel(optimizer, imageSize):
 	
 	# Compile and return the model.
 	model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
-	print("\n")
 	model.summary()
-	print("\n")
 	return model
 
 
@@ -116,7 +120,7 @@ def CreateDataIterators(imageSize, batchSize):
 	return trainIterator, validationIterator
 	
 
-def SaveResults(history, fileName):
+def GenerateCharts(history, fileName):
 	plt.subplot(211)
 	plt.plot(history.history["loss"]    , color="blue"  , label="Train")
 	plt.plot(history.history["val_loss"], color="orange", label="Validate")
@@ -132,7 +136,17 @@ def SaveResults(history, fileName):
 	plt.tight_layout()
 	plt.savefig(fileName)
 	plt.close()
-
-
+	
+	
+def SaveResults(history, args):
+	N                   = len(history.history["val_loss"])
+	train_loss          = history.history["loss"][N-1]
+	train_accuracy      = history.history["accuracy"][N-1] * 100.0
+	validation_loss     = history.history["val_loss"][N-1]
+	validation_accuracy = history.history["val_accuracy"][N-1] * 100.0
+	with open(args.outputCSV, "a") as _file:
+		_file.write("{}, {}, {}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(args.optimizer, args.imageSize, args.batchSize, train_loss, train_accuracy, validation_loss, validation_accuracy))
+	
+	
 if __name__ == "__main__":
 	sys.exit(main())
