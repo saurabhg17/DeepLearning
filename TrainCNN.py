@@ -6,6 +6,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2" # Prints only the error messages.
 
 import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN)
 
 Sequential         = tf.keras.models.Sequential
 Dense              = tf.keras.layers.Dense
@@ -53,7 +54,7 @@ def main():
 	history = model.fit_generator(trainIterator, 
 	                              steps_per_epoch=len(trainIterator), 
 								  epochs=NUM_EPOCHS, 
-								  verbose=2,
+								  verbose=1,
 								  validation_data=validationIterator, 
 								  validation_steps=len(validationIterator))
 	print("\n")
