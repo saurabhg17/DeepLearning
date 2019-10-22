@@ -19,11 +19,11 @@ from matplotlib import pyplot as plt
 import argparse, sys
 
 
-TRAIN_DIR          = "data/train_srctest"
-VALIDATION_DIR     = "data/validate_srctest"
+TRAIN_DIR          = "data/train"
+VALIDATION_DIR     = "data/validate"
 DEFAULT_IMAGE_SIZE = 200
 DEFAULT_BATCH_SIZE = 32
-NUM_EPOCHS         = 2
+NUM_EPOCHS         = 20
 
 
 def main():
