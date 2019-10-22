@@ -207,7 +207,8 @@ def SaveResults(history, args):
 	validation_loss     = history.history["val_loss"][N-1]
 	validation_accuracy = history.history["val_accuracy"][N-1] * 100.0
 	with open(args.outputCSV, "a") as _file:
-		_file.write("{}, {}, {}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(args.optimizer, args.imageSize, args.batchSize, train_loss, train_accuracy, validation_loss, validation_accuracy))
+		reg = args.addDropout or args.addAugmentation
+		_file.write("{}, {}, {}, {}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(args.optimizer, args.imageSize, args.batchSize, reg, train_loss, train_accuracy, validation_loss, validation_accuracy))
 	
 	
 def printArgs(args):
