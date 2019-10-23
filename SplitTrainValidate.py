@@ -33,5 +33,5 @@ def moveImages(numImagesToMove, newFolder):
 NUM_VALIDATION_IMAGES = 25000 * 0.20
 NUM_TEST_IMAGES       = 25000 * 0.20
 
-moveImages(NUM_VALIDATION_IMAGES, "validation")
+moveImages(NUM_VALIDATION_IMAGES, "validate")
 moveImages(NUM_TEST_IMAGES, "test")
