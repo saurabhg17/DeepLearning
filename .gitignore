@@ -1,4 +1,2 @@
 .vscode/
-test/
-train*/
-validate*/
+data/
