@@ -21,35 +21,36 @@ ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
 
 # Import other packages.
 from matplotlib import pyplot as plt
-import argparse, math, sys, SUtils
+import argparse, math, os, sys, SUtils
+from pprint import pprint
 
 
 # Define global variables.
-TRAIN_DIR                = "data/train"
-VALIDATION_DIR           = "data/validate"
-TRAIN_DIR_DEBUG          = "data/train_debug"
-VALIDATION_DIR_DEBUG     = "data/validate_debug"
-DEFAULT_LEARNING_RATE    = 1e-4
-DEFAULT_IMAGE_SIZE       = 224
-DEFAULT_OPTIMIZER        = "adam"
-DEFAULT_BATCH_SIZE       = 25
-DEFAULT_NUM_EPOCHS       = 30
-DEFAULT_AUG_MULTIPLIER   = 3
-DEFAULT_CHART_FILENAME   = "Results.csv"
-DEFAULT_RESULTS_FILENAME = "Results.png"
+TRAIN_DIR                 = "data/train"
+VALIDATION_DIR            = "data/validate"
+TRAIN_DIR_DEBUG           = "data/train_debug"
+VALIDATION_DIR_DEBUG      = "data/validate_debug"
+DEFAULT_LEARNING_RATE     = 1e-4
+DEFAULT_IMAGE_SIZE        = 224
+DEFAULT_OPTIMIZER         = "adam"
+DEFAULT_BATCH_SIZE        = 25
+DEFAULT_NUM_EPOCHS        = 30
+DEFAULT_AUG_MULTIPLIER    = 3
+DEFAULT_OUTPUTFILE_PREFIX = "Foo"
+DEFAULT_RESULTS_FILENAME  = "Results.csv"
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 def getArgs():
 	parser = argparse.ArgumentParser(description="Train a CNN model for dog-vs-cat dataset from Kaggle.")
-	parser.add_argument("--learningRate" , "-lr", type=float, help="The leaning rate to use"         , default=DEFAULT_LEARNING_RATE)
-	parser.add_argument("--imageSize"    , "-is", type=int  , help="The image size to use"           , default=DEFAULT_IMAGE_SIZE)
-	parser.add_argument("--optimizer"    , "-op", type=str  , help="The optimization function to use", default=DEFAULT_OPTIMIZER)
-	parser.add_argument("--batchSize"    , "-bs", type=int  , help="The batch size"                  , default=DEFAULT_BATCH_SIZE)
-	parser.add_argument("--numEpochs"    , "-ne", type=int  , help="The number of epochs"            , default=DEFAULT_NUM_EPOCHS)
-	parser.add_argument("--augMultiplier", "-am", type=int  , help="The number of epochs"            , default=DEFAULT_AUG_MULTIPLIER)
-	parser.add_argument("--outputChart"  , "-oc", type=str  , help="The output chart file name"      , default=DEFAULT_CHART_FILENAME)
-	parser.add_argument("--outputCSV"    , "-od", type=str  , help="The output CSV file name"        , default=DEFAULT_RESULTS_FILENAME)
+	parser.add_argument("--learningRate"        , "-lr" , type=float, help="The leaning rate to use"              , default=DEFAULT_LEARNING_RATE)
+	parser.add_argument("--imageSize"           , "-is" , type=int  , help="The image size to use"                , default=DEFAULT_IMAGE_SIZE)
+	parser.add_argument("--optimizer"           , "-op" , type=str  , help="The optimization function to use"     , default=DEFAULT_OPTIMIZER)
+	parser.add_argument("--batchSize"           , "-bs" , type=int  , help="The batch size"                       , default=DEFAULT_BATCH_SIZE)
+	parser.add_argument("--numEpochs"           , "-ne" , type=int  , help="The number of epochs"                 , default=DEFAULT_NUM_EPOCHS)
+	parser.add_argument("--augMultiplier"       , "-am" , type=int  , help="The multiplier for image augmentation", default=DEFAULT_AUG_MULTIPLIER)
+	parser.add_argument("--outputFileNamePrefix", "-pre", type=str  , help="The prefix for the output files"      , default=DEFAULT_OUTPUTFILE_PREFIX)
+	parser.add_argument("--resultsFileName"     , "-res", type=str  , help="The output CSV file name"             , default=DEFAULT_RESULTS_FILENAME)
 	
 	parser.add_argument("--dropout"   ,  dest='addDropout', action='store_true' , help="Enable dropout regularization.")
 	parser.add_argument("--no-dropout",  dest='addDropout', action='store_false', help="Disable dropout regularization.")
@@ -115,6 +116,14 @@ def main():
 	print("Image augmentation                : {}".format(args.addAugmentation))
 	print("")
 	
+	trainingParameters = {
+		"NumTrainImages"          : trainIterator.n,
+		"NumValidationImages"     : validationIterator.n,
+		"TrainingStepsPerEpoch"   : trainingSteps,
+		"ValidationStepsPerEpoch" : validationSteps,
+		"NumImagesUsedForTraining": trainingSteps * args.batchSize,
+	}
+	
 	history = model.fit_generator(trainIterator, 
 	                              steps_per_epoch  = trainingSteps, 
 								  epochs           = args.numEpochs, 
@@ -122,12 +131,13 @@ def main():
 								  validation_steps = validationSteps,
 								  callbacks        = [earlyStopping],
 								  verbose          = 1)
+	model.save(args.outputFileNamePrefix + ".h5")
 	print("\n")
 	
-	
 	# Save results.
-	SUtils.GenerateLossAndAccuracyChart(history, args.outputChart)
-	SaveResults(history, args)
+	SUtils.GenerateLossAndAccuracyChart(history, args.outputFileNamePrefix + ".png")
+	SaveFinalResults(history, args)
+	SaveHistory(history, trainingParameters, args)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
@@ -226,15 +236,55 @@ def CreateDataIterators(imageSize, batchSize, addAugmentation, trainDir, validat
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def SaveResults(history, args):
+def SaveFinalResults(history, args):
 	N                   = len(history.history["val_loss"])
 	train_loss          = history.history["loss"][N-1]
 	train_accuracy      = history.history["accuracy"][N-1] * 100.0
 	validation_loss     = history.history["val_loss"][N-1]
 	validation_accuracy = history.history["val_accuracy"][N-1] * 100.0
-	with open(args.outputCSV, "a") as _file:
-		reg = args.addDropout or args.addAugmentation
-		_file.write("{}, {}, {}, {}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(args.optimizer, args.imageSize, args.batchSize, reg, train_loss, train_accuracy, validation_loss, validation_accuracy))
+	
+	if not os.path.isfile(args.resultsFileName):
+		with open(args.resultsFileName, "w") as _file:
+			_file.write("Optimizer, LearningRate, ImageSize, BatchSize, NumEpoch, Regularized, AugMultiplier, TrainLoss, TrainAcc, ValidLoss, ValidateAcc\n")
+	
+	with open(args.resultsFileName, "a") as _file:
+		_file.write("{}, ".format(args.optimizer))
+		_file.write("{}, ".format(args.learningRate))
+		_file.write("{}, ".format(args.imageSize))
+		_file.write("{}, ".format(args.batchSize))
+		_file.write("{}, ".format(args.numEpochs))
+		_file.write("{}, ".format(args.addDropout or args.addAugmentation))
+		_file.write("{}, ".format(args.augMultiplier))
+		_file.write("{:.3f}, ".format(train_loss))
+		_file.write("{:.3f}, ".format(train_accuracy))
+		_file.write("{:.3f}, ".format(validation_loss))
+		_file.write("{:.3f}, ".format(validation_accuracy))
+		_file.write("\n")
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+def SaveHistory(history, trainingParameters, args):
+	with open(args.outputFileNamePrefix + ".csv", "w") as _file:
+		# Write command line arguments.
+		_file.write("Argument, Value\n")
+		for arg in vars(args):
+			_file.write("{}, {}\n".format(arg, getattr(args, arg)))
+		
+		# Write training parameters.
+		for k, v in trainingParameters.items():
+			_file.write("{}, {}\n".format(k, v))
+		
+		# Write training history.
+		_file.write("\n\n")
+		_file.write("Epoch, Training Loss, Training Accuracy, Validation Loss, Validation Accuracy\n")
+		N = len(history.history["val_loss"])
+		for e in range(0, N):
+			train_loss          = history.history["loss"][e]
+			train_accuracy      = history.history["accuracy"][e] * 100.0
+			validation_loss     = history.history["val_loss"][e]
+			validation_accuracy = history.history["val_accuracy"][e] * 100.0
+			_file.write("{}, {:.3f}, {:.3f}, {:.3f}, {:.3f}\n".format(e, train_loss, train_accuracy, validation_loss, validation_accuracy))
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
