@@ -23,6 +23,7 @@ ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
 from matplotlib import pyplot as plt
 import argparse, math, os, sys, SUtils
 from pprint import pprint
+from enum import Enum
 
 
 # Define global variables.
@@ -30,27 +31,36 @@ TRAIN_DIR                 = "data/train"
 VALIDATION_DIR            = "data/validate"
 TRAIN_DIR_DEBUG           = "data/train_debug"
 VALIDATION_DIR_DEBUG      = "data/validate_debug"
+DEFAULT_OPTIMIZER         = "adam"
 DEFAULT_LEARNING_RATE     = 1e-4
 DEFAULT_IMAGE_SIZE        = 224
-DEFAULT_OPTIMIZER         = "adam"
 DEFAULT_BATCH_SIZE        = 25
 DEFAULT_NUM_EPOCHS        = 30
 DEFAULT_AUG_MULTIPLIER    = 3
 DEFAULT_OUTPUTFILE_PREFIX = "Foo"
 DEFAULT_RESULTS_FILENAME  = "Results.csv"
 
+class ClassMode(Enum):
+    categorical = "categorical"
+    binary      = "binary"
+    
+    def __str__(self):
+        return self.value
+
+DEFAULT_CLASS_MODE = ClassMode.categorical
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 def getArgs():
 	parser = argparse.ArgumentParser(description="Train a CNN model for dog-vs-cat dataset from Kaggle.")
-	parser.add_argument("--learningRate"        , "-lr" , type=float, help="The leaning rate to use"              , default=DEFAULT_LEARNING_RATE)
-	parser.add_argument("--imageSize"           , "-is" , type=int  , help="The image size to use"                , default=DEFAULT_IMAGE_SIZE)
-	parser.add_argument("--optimizer"           , "-op" , type=str  , help="The optimization function to use"     , default=DEFAULT_OPTIMIZER)
-	parser.add_argument("--batchSize"           , "-bs" , type=int  , help="The batch size"                       , default=DEFAULT_BATCH_SIZE)
-	parser.add_argument("--numEpochs"           , "-ne" , type=int  , help="The number of epochs"                 , default=DEFAULT_NUM_EPOCHS)
-	parser.add_argument("--augMultiplier"       , "-am" , type=int  , help="The multiplier for image augmentation", default=DEFAULT_AUG_MULTIPLIER)
-	parser.add_argument("--outputFileNamePrefix", "-pre", type=str  , help="The prefix for the output files"      , default=DEFAULT_OUTPUTFILE_PREFIX)
-	parser.add_argument("--resultsFileName"     , "-res", type=str  , help="The output CSV file name"             , default=DEFAULT_RESULTS_FILENAME)
+	parser.add_argument("--classMode"           , "-cm" , type=ClassMode, help="The loss function to use"             , default=DEFAULT_CLASS_MODE, choices=list(ClassMode))
+	parser.add_argument("--optimizer"           , "-op" , type=str      , help="The optimization function to use"     , default=DEFAULT_OPTIMIZER)
+	parser.add_argument("--learningRate"        , "-lr" , type=float    , help="The leaning rate to use"              , default=DEFAULT_LEARNING_RATE)
+	parser.add_argument("--imageSize"           , "-is" , type=int      , help="The image size to use"                , default=DEFAULT_IMAGE_SIZE)
+	parser.add_argument("--batchSize"           , "-bs" , type=int      , help="The batch size"                       , default=DEFAULT_BATCH_SIZE)
+	parser.add_argument("--numEpochs"           , "-ne" , type=int      , help="The number of epochs"                 , default=DEFAULT_NUM_EPOCHS)
+	parser.add_argument("--augMultiplier"       , "-am" , type=int      , help="The multiplier for image augmentation", default=DEFAULT_AUG_MULTIPLIER)
+	parser.add_argument("--outputFileNamePrefix", "-pre", type=str      , help="The prefix for the output files"      , default=DEFAULT_OUTPUTFILE_PREFIX)
+	parser.add_argument("--resultsFileName"     , "-res", type=str      , help="The output CSV file name"             , default=DEFAULT_RESULTS_FILENAME)
 	
 	parser.add_argument("--dropout"   ,  dest='addDropout', action='store_true' , help="Enable dropout regularization.")
 	parser.add_argument("--no-dropout",  dest='addDropout', action='store_false', help="Disable dropout regularization.")
@@ -66,8 +76,15 @@ def getArgs():
 	
 	args = parser.parse_args()
 	
+	args.classMode = str(args.classMode).lower()
+	args.optimizer = args.optimizer.lower()
+	
+	# Check compatibility of loss function and optimizer.
+	if args.classMode == "binary" and args.optimizer != "rmsprop":
+		print("Binary loss function can only be used with RMSProp optimizer")
+		sys.exit(1)
+	
 	SUtils.PrintArgs(args, "Command line arguments:")
-	print("\n")
 	return args
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
@@ -75,9 +92,8 @@ def getArgs():
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 def main():
 	print("\n")
-	
 	args = getArgs()
-	
+	print("\n")
 	
 	# Create training and validation directory iterators.
 	if args.debug:
@@ -88,12 +104,12 @@ def main():
 		validationDir = VALIDATION_DIR
 	
 	print("Creating training and validation image iterators")
-	trainIterator, validationIterator = CreateDataIterators(args.imageSize, args.batchSize, args.addAugmentation, trainDir, validationDir)
+	trainIterator, validationIterator = CreateDataIterators(args.classMode, args.imageSize, args.batchSize, args.addAugmentation, trainDir, validationDir)
 	print("\n")
 	
 	
 	# Define CNN model.
-	model = DefineCnnModel(args.optimizer, args.learningRate, args.imageSize, args.addDropout)
+	model = DefineCnnModel(args.classMode, args.optimizer, args.learningRate, args.imageSize, args.addDropout)
 	print("\n")
 	
 	
@@ -142,7 +158,7 @@ def main():
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def DefineCnnModel(optimizerName, learningRate, imageSize, addDropout):
+def DefineCnnModel(classMode, optimizerName, learningRate, imageSize, addDropout):
 	model = Sequential()
 	
 	# Block 1.
@@ -177,29 +193,37 @@ def DefineCnnModel(optimizerName, learningRate, imageSize, addDropout):
 		model.add(Dropout(0.5))
 	model.add(Dense(512, activation="relu", kernel_initializer="he_uniform"))
 	model.add(Dense(256, activation="relu", kernel_initializer="he_uniform"))
-	model.add(Dense(  2, activation="softmax"))
+	
+	lossFx = classMode + "_crossentropy"
+	if classMode == "categorical":
+		model.add(Dense(2, activation="softmax"))
+	elif classMode == "binary":
+		model.add(Dense(1, activation="sigmoid"))
+	else:
+		print("Unknow loss function.")
+		sys.exit(1)
 	
 	# define optimizer
 	optimizer = None
-	if optimizerName.lower() == "adam":
+	if optimizerName == "adam":
 		optimizer = Adam(lr=learningRate)
-	elif optimizerName.lower() == "rmsprop":
+	elif optimizerName == "rmsprop":
 		optimizer = RMSprop(lr=learningRate)
-	elif optimizerName.lower() == "sgd":
+	elif optimizerName == "sgd":
 		optimizer = SGD(lr=learningRate)
 	else:
 		print("{} is not a valid optimizer name.".format(optimizerName))
 		sys.exit(1)
 	
 	# Compile and return the model.
-	model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
+	model.compile(optimizer=optimizer, loss=lossFx, metrics=["accuracy"])
 	model.summary()
 	return model
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def CreateDataIterators(imageSize, batchSize, addAugmentation, trainDir, validationDir):
+def CreateDataIterators(classMode, imageSize, batchSize, addAugmentation, trainDir, validationDir):
 	# Rescale pixel values to be between 0.0 and 1.0
 	if addAugmentation:
 		trainDatagen = ImageDataGenerator(rescale            = 1.0/255.0,
@@ -218,7 +242,7 @@ def CreateDataIterators(imageSize, batchSize, addAugmentation, trainDir, validat
 													 color_mode    = "rgb",
 													 interpolation = "bicubic",
 													 batch_size    = batchSize,
-													 class_mode    = "categorical",
+													 class_mode    = classMode,
 													 shuffle       = True)
 	
 	# Rescale pixel values to be between 0.0 and 1.0
@@ -228,7 +252,7 @@ def CreateDataIterators(imageSize, batchSize, addAugmentation, trainDir, validat
 															   color_mode    = "rgb",
 															   interpolation = "bicubic",
 															   batch_size    = batchSize,
-															   class_mode    = "categorical",
+															   class_mode    = classMode,
 															   shuffle       = True)
 	
 	return trainIterator, validationIterator
