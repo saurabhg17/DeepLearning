@@ -2,7 +2,11 @@ from tensorflow.keras.models import Model
 from matplotlib import pyplot as plt
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def GenerateCharts(history, fileName):
+# Given a history object returned from the tf.keras.models.Model.fit() or 
+# tf.keras.models.Model.fit_genertor() functions, this function generates a loss and accuracy chart
+# for both training and validation.
+# This chart is very useful to determine if the model under or over fits the data.
+def GenerateLossAndAccuracyChart(history, fileName):
 	plt.subplot(211)
 	plt.plot(history.history["loss"]    , color="blue"  , label="Train")
 	plt.plot(history.history["val_loss"], color="orange", label="Validate")
@@ -22,6 +26,7 @@ def GenerateCharts(history, fileName):
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+# Print the command line arguments passed through argparse package.
 def PrintArgs(args, message):
 	L = 0
 	for arg in vars(args):
