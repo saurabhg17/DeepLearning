@@ -1,5 +1,65 @@
 from tensorflow.keras.models import Model
 from matplotlib import pyplot as plt
+from enum import Enum
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+# Define a Enum for class mode to use while training a CNN.
+class ClassMode(Enum):
+	Categorical = "Categorical"
+	Binary      = "Binary"
+	
+	# magic methods for argparse compatibility
+	def __str__(self):
+		return self.name
+	
+	def __repr__(self):
+		return str(self)
+	
+	@staticmethod
+	def argparse(s):
+		try:
+			return ClassMode[s]
+		except KeyError:
+			return s
+
+class CnnArch(Enum):
+	Custom = "Custom"
+	VGG16  = "VGG16"
+	
+	# magic methods for argparse compatibility
+	def __str__(self):
+		return self.name
+	
+	def __repr__(self):
+		return str(self)
+	
+	@staticmethod
+	def argparse(s):
+		try:
+			return ClassMode[s]
+		except KeyError:
+			return s
+
+class Optimizer(Enum):
+	Adam    = "Adam"
+	SGD     = "SGD"
+	RMSProp = "RMSProp"
+	
+	# magic methods for argparse compatibility
+	def __str__(self):
+		return self.name
+	
+	def __repr__(self):
+		return str(self)
+	
+	@staticmethod
+	def argparse(s):
+		try:
+			return ClassMode[s]
+		except KeyError:
+			return s
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 # Given a history object returned from the tf.keras.models.Model.fit() or 

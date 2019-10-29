@@ -3,27 +3,29 @@ import os
 # 1 | INFO    | Filter out INFO messages
 # 2 | WARNING | Filter out INFO & WARNING messages
 # 3 | ERROR   | Filter out all messages
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2" # Prints only the error messages.
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2" # Print only the error messages.
+
 
 # Import tensor flow and define a name for all the classes we want to use.
 import tensorflow as tf
-Sequential         = tf.keras.models.Sequential
-Conv2D             = tf.keras.layers.Conv2D
-MaxPooling2D       = tf.keras.layers.MaxPooling2D
-Flatten            = tf.keras.layers.Flatten
-Dense              = tf.keras.layers.Dense
-Dropout            = tf.keras.layers.Dropout
-Adam               = tf.keras.optimizers.Adam
-RMSprop            = tf.keras.optimizers.RMSprop
-SGD                = tf.keras.optimizers.SGD
-EarlyStopping      = tf.keras.callbacks.EarlyStopping
-ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
+Sequential            = tf.keras.models.Sequential
+Conv2D                = tf.keras.layers.Conv2D
+MaxPooling2D          = tf.keras.layers.MaxPooling2D
+Flatten               = tf.keras.layers.Flatten
+Dense                 = tf.keras.layers.Dense
+Dropout               = tf.keras.layers.Dropout
+Adam                  = tf.keras.optimizers.Adam
+RMSprop               = tf.keras.optimizers.RMSprop
+SGD                   = tf.keras.optimizers.SGD
+EarlyStopping         = tf.keras.callbacks.EarlyStopping
+ImageDataGenerator    = tf.keras.preprocessing.image.ImageDataGenerator
+VGG16                 = tf.keras.applications.vgg16.VGG16
+VGG16_PreprocessInput = tf.keras.applications.vgg16.preprocess_input
+
 
 # Import other packages.
 from matplotlib import pyplot as plt
 import argparse, math, os, sys, SUtils
-from pprint import pprint
-from enum import Enum
 
 
 # Define global variables.
@@ -31,7 +33,10 @@ TRAIN_DIR                 = "data/train"
 VALIDATION_DIR            = "data/validate"
 TRAIN_DIR_DEBUG           = "data/train_debug"
 VALIDATION_DIR_DEBUG      = "data/validate_debug"
-DEFAULT_OPTIMIZER         = "adam"
+
+DEFAULT_CNN_ARCH          = SUtils.CnnArch.Custom
+DEFAULT_CLASS_MODE        = SUtils.ClassMode.Categorical
+DEFAULT_OPTIMIZER         = SUtils.Optimizer.Adam
 DEFAULT_LEARNING_RATE     = 1e-4
 DEFAULT_IMAGE_SIZE        = 224
 DEFAULT_BATCH_SIZE        = 25
@@ -40,49 +45,50 @@ DEFAULT_AUG_MULTIPLIER    = 3
 DEFAULT_OUTPUTFILE_PREFIX = "Foo"
 DEFAULT_RESULTS_FILENAME  = "Results.csv"
 
-class ClassMode(Enum):
-    categorical = "categorical"
-    binary      = "binary"
-    
-    def __str__(self):
-        return self.value
-
-DEFAULT_CLASS_MODE = ClassMode.categorical
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 def getArgs():
-	parser = argparse.ArgumentParser(description="Train a CNN model for dog-vs-cat dataset from Kaggle.")
-	parser.add_argument("--classMode"           , "-cm" , type=ClassMode, help="The loss function to use"             , default=DEFAULT_CLASS_MODE, choices=list(ClassMode))
-	parser.add_argument("--optimizer"           , "-op" , type=str      , help="The optimization function to use"     , default=DEFAULT_OPTIMIZER)
-	parser.add_argument("--learningRate"        , "-lr" , type=float    , help="The leaning rate to use"              , default=DEFAULT_LEARNING_RATE)
-	parser.add_argument("--imageSize"           , "-is" , type=int      , help="The image size to use"                , default=DEFAULT_IMAGE_SIZE)
-	parser.add_argument("--batchSize"           , "-bs" , type=int      , help="The batch size"                       , default=DEFAULT_BATCH_SIZE)
-	parser.add_argument("--numEpochs"           , "-ne" , type=int      , help="The number of epochs"                 , default=DEFAULT_NUM_EPOCHS)
-	parser.add_argument("--augMultiplier"       , "-am" , type=int      , help="The multiplier for image augmentation", default=DEFAULT_AUG_MULTIPLIER)
-	parser.add_argument("--outputFileNamePrefix", "-pre", type=str      , help="The prefix for the output files"      , default=DEFAULT_OUTPUTFILE_PREFIX)
-	parser.add_argument("--resultsFileName"     , "-res", type=str      , help="The output CSV file name"             , default=DEFAULT_RESULTS_FILENAME)
+	parser = argparse.ArgumentParser(description="Train a CNN model for classifying images into classes.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	
-	parser.add_argument("--dropout"   ,  dest='addDropout', action='store_true' , help="Enable dropout regularization.")
-	parser.add_argument("--no-dropout",  dest='addDropout', action='store_false', help="Disable dropout regularization.")
-	parser.set_defaults(addDropout=False)
+	group = parser.add_argument_group("General Parameters")
+	group.add_argument("--cnnArch"  , type=SUtils.CnnArch.argparse  , help="The CNN architecture"      , default=DEFAULT_CNN_ARCH  , choices=list(SUtils.CnnArch))
+	group.add_argument("--classMode", type=SUtils.ClassMode.argparse, help="The class mode of the data", default=DEFAULT_CLASS_MODE, choices=list(SUtils.ClassMode))
 	
-	parser.add_argument("--augmentation"   , dest='addAugmentation', action='store_true' , help="Enable image augmentations.")
-	parser.add_argument("--no-augmentation", dest='addAugmentation', action='store_false', help="Disable image augmentations.")
-	parser.set_defaults(addAugmentation=False)
+	group = parser.add_argument_group("Hyper Parameters")
+	group.add_argument("--optimizer"   , type=SUtils.Optimizer.argparse, help="The optimization function"            , default=DEFAULT_OPTIMIZER, choices=list(SUtils.Optimizer))
+	group.add_argument("--learningRate", type=float                    , help="The learning rate"                    , default=DEFAULT_LEARNING_RATE)
+	group.add_argument("--imageSize"   , type=int                      , help="The image size"                       , default=DEFAULT_IMAGE_SIZE)
+	group.add_argument("--numEpochs"   , type=int                      , help="The maximum number of epochs to train", default=DEFAULT_NUM_EPOCHS)
+	group.add_argument("--batchSize"   , type=int                      , help="The batch size to use for training"   , default=DEFAULT_BATCH_SIZE)
 	
-	parser.add_argument("--debug"   , dest='debug', action='store_true' , help="Debugging mode uses a smaller dataset for faster execution.")
-	parser.add_argument("--no-debug", dest='debug', action='store_false', help="Disable debugging.")
-	parser.set_defaults(debug=False)
+	group = parser.add_argument_group("Output Parameters")
+	group.add_argument("--outputFileNamePrefix", type=str, help="The prefix for all output files"   , default=DEFAULT_OUTPUTFILE_PREFIX)
+	group.add_argument("--resultsFileName"     , type=str, help="File name of the common output CSV", default=DEFAULT_RESULTS_FILENAME)
+	
+	group = parser.add_argument_group("Regularization Parameters")
+	group.add_argument("--dropout"   ,  dest='addDropout', action='store_true' , help="Enable dropout regularization.")
+	group.add_argument("--no-dropout",  dest='addDropout', action='store_false', help="Disable dropout regularization.")
+	group.set_defaults(addDropout=False)
+	
+	group.add_argument("--augmentation"   , dest='addAugmentation', action='store_true' , help="Enable image augmentations.")
+	group.add_argument("--no-augmentation", dest='addAugmentation', action='store_false', help="Disable image augmentations.")
+	group.set_defaults(addAugmentation=False)
+	group.add_argument("--augMultiplier", type=int, help="With image augmentation, number of images in the dataset times this multiplier is used for training.", default=DEFAULT_AUG_MULTIPLIER)
+	
+	group = parser.add_argument_group("Other Parameters")
+	group.add_argument("--debug"   , dest='debug', action='store_true' , help="Debugging mode uses a smaller dataset for faster execution.")
+	group.add_argument("--no-debug", dest='debug', action='store_false', help="Disable debugging.")
+	group.set_defaults(debug=False)
 	
 	args = parser.parse_args()
 	
-	args.classMode = str(args.classMode).lower()
-	args.optimizer = args.optimizer.lower()
-	
 	# Check compatibility of loss function and optimizer.
-	if args.classMode == "binary" and args.optimizer != "rmsprop":
+	if args.classMode == SUtils.ClassMode.Binary and args.optimizer != SUtils.Optimizer.RMSProp:
 		print("Binary loss function can only be used with RMSProp optimizer")
 		sys.exit(1)
+	
+	if args.cnnArch == SUtils.CnnArch.VGG16:
+		print("Warning: Image size is not used when vgg16 is used.")
 	
 	SUtils.PrintArgs(args, "Command line arguments:")
 	return args
@@ -91,10 +97,11 @@ def getArgs():
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 def main():
-	print("\n")
+	print("")
 	args = getArgs()
 	print("\n")
 	
+	# --------------------------------------------------.
 	# Create training and validation directory iterators.
 	if args.debug:
 		trainDir      = TRAIN_DIR_DEBUG
@@ -104,32 +111,43 @@ def main():
 		validationDir = VALIDATION_DIR
 	
 	print("Creating training and validation image iterators")
-	trainIterator, validationIterator = CreateDataIterators(args.classMode, args.imageSize, args.batchSize, args.addAugmentation, trainDir, validationDir)
+	trainIterator, validationIterator = CreateDataIterators(args.cnnArch, args.classMode, args.imageSize, args.batchSize, args.addAugmentation, trainDir, validationDir)
 	print("\n")
 	
 	
+	# --------------------------------------------------.
 	# Define CNN model.
-	model = DefineCnnModel(args.classMode, args.optimizer, args.learningRate, args.imageSize, args.addDropout)
+	if args.cnnArch == SUtils.CnnArch.Custom:
+		model = DefineCnnModel(args.classMode, args.optimizer, args.learningRate, args.imageSize, args.addDropout)
+	elif args.cnnArch == SUtils.CnnArch.VGG16:
+		model = DefineVggTopModel(args.classMode, args.optimizer, args.learningRate, args.addDropout)
 	print("\n")
 	
 	
+	# --------------------------------------------------.
 	# Fit a model to data.
-	earlyStopping   = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, verbose=1, mode='auto')
+	#earlyStopping   = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, verbose=1, mode='auto')
 	trainingSteps   = math.ceil(trainIterator.n      / args.batchSize)
 	validationSteps = math.ceil(validationIterator.n / args.batchSize)
 	if args.addAugmentation:
 		trainingSteps = trainingSteps * args.augMultiplier
 	
 	print("Training CNN model with the following parameters:")
-	print("Number of training images         : {}".format(trainIterator.n))
-	print("Number of validation images       : {}".format(validationIterator.n))
+	print("CNN architecture                  : {}".format(args.cnnArch))
+	print("Class mode                        : {}".format(args.classMode))
+	print("Optimizer                         : {}".format(args.optimizer))
+	print("Learning Rate                     : {}".format(args.learningRate))
+	print("Image Size                        : {}x{}".format(args.imageSize, args.imageSize))
 	print("Number of epochs                  : {}".format(args.numEpochs))
 	print("Batch size                        : {}".format(args.batchSize))
-	print("Training steps per epoch          : {}".format(trainingSteps))
-	print("Validation steps per epoch        : {}".format(validationSteps))
-	print("Number of  image used for training: {}".format(trainingSteps * args.batchSize))
 	print("Dropout layers                    : {}".format(args.addDropout))
 	print("Image augmentation                : {}".format(args.addAugmentation))
+	print("Image augmentation multiplier     : {}".format(args.augMultiplier))
+	print("Number of training images         : {}".format(trainIterator.n))
+	print("Number of validation images       : {}".format(validationIterator.n))
+	print("Training steps per epoch          : {}".format(trainingSteps))
+	print("Validation steps per epoch        : {}".format(validationSteps))
+	print("Number of images used for training: {}".format(trainingSteps * args.batchSize))
 	print("")
 	
 	trainingParameters = {
@@ -145,20 +163,22 @@ def main():
 								  epochs           = args.numEpochs, 
 								  validation_data  = validationIterator, 
 								  validation_steps = validationSteps,
-								  callbacks        = [earlyStopping],
+								  #callbacks        = [earlyStopping],
 								  verbose          = 1)
-	model.save(args.outputFileNamePrefix + ".h5")
 	print("\n")
 	
+	
+	# --------------------------------------------------.
 	# Save results.
+	model.save(args.outputFileNamePrefix + ".h5")
 	SUtils.GenerateLossAndAccuracyChart(history, args.outputFileNamePrefix + ".png")
-	SaveFinalResults(history, args)
+	SaveStatsToCommanFile(history, args)
 	SaveHistory(history, trainingParameters, args)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def DefineCnnModel(classMode, optimizerName, learningRate, imageSize, addDropout):
+def DefineCnnModel(classMode, optimizer, learningRate, imageSize, addDropout):
 	model = Sequential()
 	
 	# Block 1.
@@ -194,38 +214,76 @@ def DefineCnnModel(classMode, optimizerName, learningRate, imageSize, addDropout
 	model.add(Dense(512, activation="relu", kernel_initializer="he_uniform"))
 	model.add(Dense(256, activation="relu", kernel_initializer="he_uniform"))
 	
-	lossFx = classMode + "_crossentropy"
-	if classMode == "categorical":
+	lossFx = classMode.value.lower() + "_crossentropy"
+	if classMode == SUtils.ClassMode.Categorical:
 		model.add(Dense(2, activation="softmax"))
-	elif classMode == "binary":
+	elif classMode == SUtils.ClassMode.Binary:
 		model.add(Dense(1, activation="sigmoid"))
-	else:
-		print("Unknow loss function.")
-		sys.exit(1)
 	
 	# define optimizer
-	optimizer = None
-	if optimizerName == "adam":
-		optimizer = Adam(lr=learningRate)
-	elif optimizerName == "rmsprop":
-		optimizer = RMSprop(lr=learningRate)
-	elif optimizerName == "sgd":
-		optimizer = SGD(lr=learningRate)
-	else:
-		print("{} is not a valid optimizer name.".format(optimizerName))
-		sys.exit(1)
+	opt = None
+	if optimizer == SUtils.Optimizer.Adam:
+		opt = Adam(lr=learningRate)
+	elif optimizer == SUtils.Optimizer.RMSProp:
+		opt = RMSprop(lr=learningRate)
+	elif optimizer == SUtils.Optimizer.SGD:
+		opt = SGD(lr=learningRate)
 	
 	# Compile and return the model.
-	model.compile(optimizer=optimizer, loss=lossFx, metrics=["accuracy"])
+	model.compile(optimizer=opt, loss=lossFx, metrics=["accuracy"])
 	model.summary()
 	return model
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 
 
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #	
+def DefineVggTopModel(classMode, optimizer, learningRate, addDropout):
+	vgg16Base = VGG16(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
+	vgg16Base.trainable = False
+	
+	model = Sequential()
+	model.add(vgg16Base)
+	
+	model.add(Flatten())
+	if addDropout:
+		model.add(Dropout(0.5))
+	
+	model.add(Dense(512, activation='relu'))
+	if addDropout:
+		model.add(Dropout(0.5))
+	
+	model.add(Dense(256, activation='relu'))
+	model.add(Dense(  2, activation='softmax'))
+	
+	# Compile and return the model.
+	lossFx = classMode.value.lower() + "_crossentropy"
+	if classMode == SUtils.ClassMode.Categorical:
+		model.add(Dense(2, activation="softmax"))
+	elif classMode == SUtils.ClassMode.Binary:
+		model.add(Dense(1, activation="sigmoid"))
+	
+	# Define optimizer
+	opt = None
+	if optimizer == SUtils.Optimizer.Adam:
+		opt = Adam(lr=learningRate)
+	elif optimizer == SUtils.Optimizer.RMSProp:
+		opt = RMSprop(lr=learningRate)
+	elif optimizer == SUtils.Optimizer.SGD:
+		opt = SGD(lr=learningRate)
+	
+	# Compile and return the model.
+	model.compile(optimizer=opt, loss=lossFx, metrics=["accuracy"])
+	model.summary()
+	return model
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #	
+
+
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def CreateDataIterators(classMode, imageSize, batchSize, addAugmentation, trainDir, validationDir):
-	# Rescale pixel values to be between 0.0 and 1.0
-	if addAugmentation:
+def CreateDataIterators(cnnArch, classMode, imageSize, batchSize, addAugmentation, trainDir, validationDir):
+	if not addAugmentation:
+		trainDatagen  = ImageDataGenerator(rescale = 1.0/255.0)
+	elif addAugmentation and cnnArch == SUtils.CnnArch.Custom:
 		trainDatagen = ImageDataGenerator(rescale            = 1.0/255.0,
                                           rotation_range     = 40,
 										  zoom_range         = 0.2,
@@ -234,25 +292,35 @@ def CreateDataIterators(classMode, imageSize, batchSize, addAugmentation, trainD
 										  shear_range        = 0.2,
 										  width_shift_range  = 0.2,
 										  height_shift_range = 0.2)
-	else:
-		trainDatagen  = ImageDataGenerator(rescale = 1.0/255.0)
+	elif addAugmentation and cnnArch == SUtils.CnnArch.VGG16:
+		trainDatagen = ImageDataGenerator(preprocessing_function=VGG16_PreprocessInput,
+                                          rotation_range     = 40,
+										  zoom_range         = 0.2,
+										  horizontal_flip    = True,
+										  vertical_flip      = False,
+										  shear_range        = 0.2,
+										  width_shift_range  = 0.2,
+										  height_shift_range = 0.2)
 	
 	trainIterator = trainDatagen.flow_from_directory(trainDir,
 	                                                 target_size   = (imageSize, imageSize),
 													 color_mode    = "rgb",
 													 interpolation = "bicubic",
 													 batch_size    = batchSize,
-													 class_mode    = classMode,
+													 class_mode    = classMode.value.lower(),
 													 shuffle       = True)
 	
-	# Rescale pixel values to be between 0.0 and 1.0
-	validationDatagen  = ImageDataGenerator(rescale= 1.0/255.0)
+	if cnnArch == SUtils.CnnArch.Custom:
+		validationDatagen  = ImageDataGenerator(rescale= 1.0/255.0)
+	elif cnnArch == SUtils.CnnArch.VGG16:
+		validationDatagen  = ImageDataGenerator(preprocessing_function=VGG16_PreprocessInput)
+	
 	validationIterator = validationDatagen.flow_from_directory(validationDir,
 	                                                           target_size   = (imageSize, imageSize),
 															   color_mode    = "rgb",
 															   interpolation = "bicubic",
 															   batch_size    = batchSize,
-															   class_mode    = classMode,
+															   class_mode    = classMode.value.lower(),
 															   shuffle       = True)
 	
 	return trainIterator, validationIterator
@@ -260,7 +328,7 @@ def CreateDataIterators(classMode, imageSize, batchSize, addAugmentation, trainD
 
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-def SaveFinalResults(history, args):
+def SaveStatsToCommanFile(history, args):
 	N                   = len(history.history["val_loss"])
 	train_loss          = history.history["loss"][N-1]
 	train_accuracy      = history.history["accuracy"][N-1] * 100.0
