@@ -88,8 +88,11 @@ Most of the parameters are self explanatory, here I explain only some of the mor
 While `TrainCNN.py` can be used by itself, it is primarily designed to be used through Windows batch file or Linux shell scripts. For example, to study the effect of batch size on validation loss we can run the following commands sequentially:
 
 Train.cnn.py -–batchSize 16 –outputFileNamePrefix Model_BS16
+
 Train.cnn.py -–batchSize 32 –outputFileNamePrefix Model_BS32
+
 Train.cnn.py -–batchSize 64 –outputFileNamePrefix Model_BS64
+
 Train.cnn.py -–batchSize 128 –outputFileNamePrefix Model_BS128
 
 Running these four command will generate the following files:
