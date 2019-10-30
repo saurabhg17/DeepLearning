@@ -253,7 +253,6 @@ def DefineVggTopModel(classMode, optimizer, learningRate, addDropout):
 		model.add(Dropout(0.5))
 	
 	model.add(Dense(256, activation='relu'))
-	model.add(Dense(  2, activation='softmax'))
 	
 	# Compile and return the model.
 	lossFx = classMode.value.lower() + "_crossentropy"

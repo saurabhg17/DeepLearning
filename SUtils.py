@@ -36,7 +36,7 @@ class CnnArch(Enum):
 	@staticmethod
 	def argparse(s):
 		try:
-			return ClassMode[s]
+			return CnnArch[s]
 		except KeyError:
 			return s
 
@@ -55,7 +55,7 @@ class Optimizer(Enum):
 	@staticmethod
 	def argparse(s):
 		try:
-			return ClassMode[s]
+			return Optimizer[s]
 		except KeyError:
 			return s
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
