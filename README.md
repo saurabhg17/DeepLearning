@@ -5,47 +5,80 @@ This repository contains code I used for learning and exploring Deep Learning us
 I wrote `TrainCNN.py` so that I can easily experiment with some of the important hyperparameters involved in training Deep Convolutional Neural Networks. Fixing hyperparameters in the code makes it difficult to try out different values of a parameter as well as to keep track of the results. `TrainCNN.py` accepts values of the hyperparameters on the command line and write the results to CSV files. One CSV file is generated with detailed information about each run of the program. It contains the values of all hyperparameters and the status of each epoch. Some of the hyperparameters, training loss and error, and validation loss and error is appended to a common CSV file. This CSV file allows easy comparison of the effect of different values of hyperparameters in a single place. Additionally, a chart illustrating training and validation loss, and training and validation error is generated using Matplotlib.
 
 `TrainCNN.py` accepts the following command line arguments:
-General Parameters:
 
-`--cnnArch {Custom,VGG16}         The CNN architecture (default: Custom)`
+**General Parameters:**
 
-`--classMode {Categorical,Binary} The class mode of the data (default: Categorical)`
+`--cnnArch {Custom,VGG16}`
 
-Hyper Parameters:
+ &nbsp;  &nbsp;  &nbsp; The CNN architecture (default: Custom)
 
-`--optimizer {Adam,SGD,RMSProp} The optimization function (default: Adam)`
+`--classMode {Categorical,Binary}`
 
-`--learningRate LEARNINGRATE    The learning rate (default: 0.0001)`
+ &nbsp;  &nbsp;  &nbsp; The class mode of the data (default: Categorical)
 
-`--imageSize IMAGESIZE          The image size (default: 224)`
+**Hyper Parameters:**
 
-`--numEpochs NUMEPOCHS          The maximum number of epochs to train (default: 30)`
+`--optimizer {Adam,SGD,RMSProp}`
 
-`--batchSize BATCHSIZE          The batch size to use for training (default: 25)`
+ &nbsp;  &nbsp;  &nbsp; The optimization function (default: Adam)
 
-Output Parameters:
+`--learningRate LEARNINGRATE`
 
-`--outputFileNamePrefix OUTPUTFILENAMEPREFIX The prefix for all output files (default: Foo)`
+ &nbsp;  &nbsp;  &nbsp; The learning rate (default: 0.0001)
 
-`--resultsFileName RESULTSFILENAME           File name of the common output CSV (default: Results.csv)`
+`--imageSize IMAGESIZE`
 
-Regularization Parameters:
+ &nbsp;  &nbsp;  &nbsp; The image size (default: 224)
 
-`--dropout                      Enable dropout regularization. (default: False)`
+`--numEpochs NUMEPOCHS`
 
-`--no-dropout                   Disable dropout regularization. (default: False)`
+ &nbsp;  &nbsp;  &nbsp; The maximum number of epochs to train (default: 30)
 
-`--augmentation                 Enable image augmentations. (default: False)`
+`--batchSize BATCHSIZE`
 
-`--no-augmentation              Disable image augmentations. (default: False)`
+ &nbsp;  &nbsp;  &nbsp; The batch size to use for training (default: 25)
 
-`--augMultiplier AUGMULTIPLIER  With image augmentation, number of images in the dataset times this multiplier is used for training. (default: 3)`
+**Output Parameters:**
 
-Other Parameters:
+`--outputFileNamePrefix OUTPUTFILENAMEPREFIX`
 
-`--debug     Debugging mode uses a smaller dataset for faster execution. (default: False)`
+ &nbsp;  &nbsp;  &nbsp; The prefix for all output files (default: Foo)
 
-`--no-debug  Disable debugging. (default: False)`
+`--resultsFileName RESULTSFILENAME`
+
+ &nbsp;  &nbsp;  &nbsp; File name of the common output CSV (default: Results.csv)
+
+**Regularization Parameters:**
+
+`--dropout`
+
+ &nbsp;  &nbsp;  &nbsp; Enable dropout regularization. (default: False)
+
+`--no-dropout`
+
+ &nbsp;  &nbsp;  &nbsp; Disable dropout regularization. (default: False)
+
+`--augmentation`
+
+ &nbsp;  &nbsp;  &nbsp; Enable image augmentations. (default: False)
+
+`--no-augmentation`
+
+ &nbsp;  &nbsp;  &nbsp; Disable image augmentations. (default: False)
+
+`--augMultiplier AUGMULTIPLIER`
+
+ &nbsp;  &nbsp;  &nbsp; With image augmentation, number of images in the dataset times this multiplier is used for training. (default: 3)
+
+**Other Parameters:**
+
+`--debug`
+
+ &nbsp;  &nbsp;  &nbsp; Debugging mode uses a smaller dataset for faster execution. (default: False)
+
+`--no-debug`
+
+ &nbsp;  &nbsp;  &nbsp; Disable debugging. (default: False)
 
 Most of the parameters are self explanatory, here I explain only some of the more obscure of them:
 * `-–cnnArch`: This parameter defines the architecture of the CNN. Two support values are `Custom` and `VGG16`. `Custom` defines a CNN model with four blocks of 2D convolutional and max pooling layers and ends with two fully dense layers. `VGG16` uses imagenet weights with VGG16 model and without the top layer. I added a single dense layer at the end. Note that when using `VGG16` model, image size is fixed at 224 x 244 and `--imageSize` is ignored.
