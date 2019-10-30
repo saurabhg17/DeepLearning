@@ -50,21 +50,13 @@ I wrote `TrainCNN.py` so that I can easily experiment with some of the important
 
 **Regularization Parameters:**
 
-`--dropout`
+`--dropout/--no-dropout`
 
- &nbsp;  &nbsp;  &nbsp; Enable dropout regularization. (default: False)
+ &nbsp;  &nbsp;  &nbsp; Enable/disable dropout regularization. (default: False)
 
-`--no-dropout`
+`--augmentation/--no-augmentation`
 
- &nbsp;  &nbsp;  &nbsp; Disable dropout regularization. (default: False)
-
-`--augmentation`
-
- &nbsp;  &nbsp;  &nbsp; Enable image augmentations. (default: False)
-
-`--no-augmentation`
-
- &nbsp;  &nbsp;  &nbsp; Disable image augmentations. (default: False)
+ &nbsp;  &nbsp;  &nbsp; Enable/disable image augmentations. (default: False)
 
 `--augMultiplier AUGMULTIPLIER`
 
@@ -72,13 +64,9 @@ I wrote `TrainCNN.py` so that I can easily experiment with some of the important
 
 **Other Parameters:**
 
-`--debug`
+`--debug/--no-debug`
 
- &nbsp;  &nbsp;  &nbsp; Debugging mode uses a smaller dataset for faster execution. (default: False)
-
-`--no-debug`
-
- &nbsp;  &nbsp;  &nbsp; Disable debugging. (default: False)
+ &nbsp;  &nbsp;  &nbsp; Enable/disable debugging. Debugging mode uses a smaller dataset for faster execution. (default: False)
 
 Most of the parameters are self explanatory, here I explain only some of the more obscure of them:
 * `-–cnnArch`: This parameter defines the architecture of the CNN. Two support values are `Custom` and `VGG16`. `Custom` defines a CNN model with four blocks of 2D convolutional and max pooling layers and ends with two fully dense layers. `VGG16` uses imagenet weights with VGG16 model and without the top layer. I added a single dense layer at the end. Note that when using `VGG16` model, image size is fixed at 224 x 244 and `--imageSize` is ignored.
