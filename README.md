@@ -6,29 +6,45 @@ I wrote `TrainCNN.py` so that I can easily experiment with some of the important
 
 `TrainCNN.py` accepts the following command line arguments:
 General Parameters:
+
 `--cnnArch {Custom,VGG16}         The CNN architecture (default: Custom)`
+
 `--classMode {Categorical,Binary} The class mode of the data (default: Categorical)`
 
 Hyper Parameters:
+
 `--optimizer {Adam,SGD,RMSProp} The optimization function (default: Adam)`
+
 `--learningRate LEARNINGRATE    The learning rate (default: 0.0001)`
+
 `--imageSize IMAGESIZE          The image size (default: 224)`
+
 `--numEpochs NUMEPOCHS          The maximum number of epochs to train (default: 30)`
+
 `--batchSize BATCHSIZE          The batch size to use for training (default: 25)`
 
 Output Parameters:
+
 `--outputFileNamePrefix OUTPUTFILENAMEPREFIX The prefix for all output files (default: Foo)`
+
 `--resultsFileName RESULTSFILENAME           File name of the common output CSV (default: Results.csv)`
 
 Regularization Parameters:
+
 `--dropout                      Enable dropout regularization. (default: False)`
+
 `--no-dropout                   Disable dropout regularization. (default: False)`
+
 `--augmentation                 Enable image augmentations. (default: False)`
+
 `--no-augmentation              Disable image augmentations. (default: False)`
+
 `--augMultiplier AUGMULTIPLIER  With image augmentation, number of images in the dataset times this multiplier is used for training. (default: 3)`
 
 Other Parameters:
+
 `--debug     Debugging mode uses a smaller dataset for faster execution. (default: False)`
+
 `--no-debug  Disable debugging. (default: False)`
 
 Most of the parameters are self explanatory, here I explain only some of the more obscure of them:
