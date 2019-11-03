@@ -7,47 +7,65 @@ I wrote `TrainCNN.py` so that I can easily experiment with some of the important
 `TrainCNN.py` accepts the following command line arguments:
 
 **General Parameters:**
+
 `--cnnArch {Custom,VGG16}`
+
 &nbsp;  &nbsp;  &nbsp; The CNN architecture (default: Custom)
 
 `--classMode {Categorical,Binary}`
+
 &nbsp;  &nbsp;  &nbsp; The class mode of the data (default: Categorical)
 
 **Hyper Parameters:**
+
 `--optimizer {Adam,SGD,RMSProp}`
+
 &nbsp;  &nbsp;  &nbsp; The optimization function (default: Adam)
 
 `--learningRate LEARNINGRATE`
+
 &nbsp;  &nbsp;  &nbsp; The learning rate (default: 0.0001)
 
 `--imageSize IMAGESIZE`
+
 &nbsp;  &nbsp;  &nbsp; The image size (default: 224)
 
 `--numEpochs NUMEPOCHS`
+
 &nbsp;  &nbsp;  &nbsp; The maximum number of epochs to train (default: 30)
 
 `--batchSize BATCHSIZE`
+
 &nbsp;  &nbsp;  &nbsp; The batch size to use for training (default: 25)
 
 **Output Parameters:**
+
 `--outputFileNamePrefix OUTPUTFILENAMEPREFIX`
+
 &nbsp;  &nbsp;  &nbsp; The prefix for all output files (default: Foo)
 
 `--resultsFileName RESULTSFILENAME`
+
 &nbsp;  &nbsp;  &nbsp; File name of the common output CSV (default: Results.csv)
 
 **Regularization Parameters:**
+
 `--dropout/--no-dropout`
+
 &nbsp;  &nbsp;  &nbsp; Enable/disable dropout regularization. (default: False)
 
 `--augmentation/--no-augmentation`
+
 &nbsp;  &nbsp;  &nbsp; Enable/disable image augmentations. (default: False)
 
 `--augMultiplier AUGMULTIPLIER`
+
 &nbsp;  &nbsp;  &nbsp; With image augmentation, number of images in the dataset times this multiplier is used for training. (default: 3)
 
 **Other Parameters:**
+
 `--debug/--no-debug`
+
  &nbsp;  &nbsp;  &nbsp; Enable/disable debugging. Debugging mode uses a smaller dataset for faster execution. (default: False)
 
 Most of the parameters are self explanatory, here I explain only some of the more obscure of them:
@@ -86,15 +104,19 @@ Running these four command will generate the following files:
 `LogisticRegression.py` trains a classifier for Kaggle’s dogs vs. cats dataset. It accepts the following command line arguments:
 
 `--imageSize`
+
 &nbsp;&nbsp;&nbsp;Logistic regression expects all samples to have the same number of features. imageSize is used to specify the size to which all images in a dataset will be rescaled to (default: 100)
 
 `--solver {lbfgs,sag,saga}`
+
 &nbsp;&nbsp;&nbsp;Choose the solver used to minimize the cost function for logistic regression (default: lbfgs)
 
 `--rescale / –-no-rescale`
+
 &nbsp;&nbsp;&nbsp;Enable rescaling pixel values in images to [0.0, 1.0] and standardize all images so that each pixel has a zero mean and 1.0 standard deviation (default: --no-rescale)
 
 `--debug / --no-debug`
+
 &nbsp;&nbsp;&nbsp;Enable debugging. In debugging mode, only first 100 images are used
 
 On first run, `LogisticRegression.py` stores the entire dataset as numpy arrays after rescaling (if specified) to a npz array. On subsequent runs, it loads this file to save time on resizing images and rescaling pixel values. The fitted model is saved to a file with prefix LRModel. Finally, `LogisticRegression.py` appends its results to `LogisticRegression.csv` with the following columns: solver, image size, rescaled, training accuracy, validation accuracy, time taken to fit model, and total time. This makes it easy to compare results from different parameters.
